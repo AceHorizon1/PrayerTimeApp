@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.prayertimes.app-mergeDebugResources-64:/values-v16/values-v16.xml",
+            "map": [
+                {
+                    "source": "/Users/ayaanniaz/.gradle/caches/8.14/transforms/b0b11b229aaef42292f7727706381506/transformed/core-1.12.0/res/values-v16/values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "65",
+                        "endOffsets": "116"
+                    }
+                }
+            ]
+        }
+    ]
+}
