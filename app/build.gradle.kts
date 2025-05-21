@@ -97,4 +97,26 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// Suppress CSS appearance property warning in build reports
+tasks.register("fixBuildReport") {
+    doLast {
+        val reportDir = layout.buildDirectory.dir("reports/problems").get().asFile
+        if (reportDir.exists()) {
+            reportDir.walk()
+                .filter { it.name == "problems-report.html" }
+                .forEach { file ->
+                    val content = file.readText()
+                    file.writeText(content.replace(
+                        "-webkit-appearance: button",
+                        "-webkit-appearance: button; appearance: button"
+                    ))
+                }
+        }
+    }
+}
+
+tasks.named("build") {
+    finalizedBy("fixBuildReport")
 } 

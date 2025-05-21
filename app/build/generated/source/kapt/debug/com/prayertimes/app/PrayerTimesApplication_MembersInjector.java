@@ -16,9 +16,7 @@ import javax.inject.Provider;
 )
 @SuppressWarnings({
     "unchecked",
-    "rawtypes",
-    "KotlinInternal",
-    "KotlinInternalInJava"
+    "rawtypes"
 })
 public final class PrayerTimesApplication_MembersInjector implements MembersInjector<PrayerTimesApplication> {
   private final Provider<HiltWorkerFactory> workerFactoryProvider;

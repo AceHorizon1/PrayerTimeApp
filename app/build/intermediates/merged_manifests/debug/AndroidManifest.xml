@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.prayertimes.app"
     android:versionCode="1"
-    android:versionName="1.0.0" >
+    android:versionName="1.0" >
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -23,18 +23,21 @@
     <uses-permission android:name="com.prayertimes.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
+        android:name="com.prayertimes.app.PrayerTimesApplication"
         android:allowBackup="true"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:debuggable="true"
         android:extractNativeLibs="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="PrayerTimesApp"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PrayerTimesApp" >
         <activity
             android:name="com.prayertimes.app.MainActivity"
-            android:exported="true" >
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.PrayerTimesApp" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -42,13 +45,16 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.google.android.gms.common.api.GoogleApiActivity"
-            android:exported="false"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            android:name="com.prayertimes.app.debug.ApiTestActivity"
+            android:exported="true"
+            android:label="Prayer Times API Test"
+            android:theme="@style/Theme.PrayerTimesApp" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <provider
             android:name="androidx.startup.InitializationProvider"

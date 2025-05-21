@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.prayertimes.app-mergeDebugResources-64:/values-v16/values-v16.xml",
+            "outputFile": "com.prayertimes.app-mergeDebugResources-60:/values-v16/values-v16.xml",
             "map": [
                 {
-                    "source": "/Users/ayaanniaz/.gradle/caches/8.14/transforms/b0b11b229aaef42292f7727706381506/transformed/core-1.12.0/res/values-v16/values-v16.xml",
+                    "source": "/Users/ayaanniaz/.gradle/caches/8.14/transforms/f1d1c5d592239cd27323a51d9bd11e51/transformed/core-1.12.0/res/values-v16/values-v16.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
