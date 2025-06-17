@@ -43,10 +43,11 @@ class PrayerTimeCalculator {
         location: Location,
         date: Date = Date(),
         method: CalculationMethod = CalculationMethod.MUSLIM_WORLD_LEAGUE,
-        asrMethod: AsrMethod = AsrMethod.STANDARD
+        asrMethod: AsrMethod = AsrMethod.STANDARD,
+        highLatitudeAdjustment: com.prayertimes.app.HighLatitudeAdjustment = com.prayertimes.app.HighLatitudeAdjustment.NONE
     ): PrayerTimes {
         Log.d(TAG, "Calculating prayer times for location: ${location.latitude}, ${location.longitude}")
-        Log.d(TAG, "Using calculation method: $method, Asr method: $asrMethod")
+        Log.d(TAG, "Using calculation method: $method, Asr method: $asrMethod, High latitude adjustment: $highLatitudeAdjustment")
 
         val calendar = Calendar.getInstance().apply {
             time = date
@@ -61,13 +62,24 @@ class PrayerTimeCalculator {
         Log.d(TAG, "Sun position - declination: ${sunPosition.declination}, equation of time: ${sunPosition.equationOfTime}")
 
         // Calculate prayer times
-        val fajr = calculateTime(calendar, location, method.fajrAngle, sunPosition)
+        var fajr = calculateTime(calendar, location, method.fajrAngle, sunPosition)
         val sunrise = calculateTime(calendar, location, 0.833, sunPosition) // Sunrise angle
         val dhuhr = calculateTime(calendar, location, 90.0, sunPosition) // Solar noon
         val asrAngle = if (asrMethod == AsrMethod.HANAFI) 120.0 else 105.0
         val asr = calculateTime(calendar, location, asrAngle, sunPosition)
         val maghrib = calculateTime(calendar, location, 0.833, sunPosition) // Sunset angle
-        val isha = calculateTime(calendar, location, method.ishaAngle, sunPosition)
+        var isha = calculateTime(calendar, location, method.ishaAngle, sunPosition)
+
+        // Apply high latitude adjustments
+        if (highLatitudeAdjustment != com.prayertimes.app.HighLatitudeAdjustment.NONE) {
+            val adjustedTimes = applyHighLatitudeAdjustment(
+                location.latitude,
+                fajr, sunrise, dhuhr, asr, maghrib, isha,
+                highLatitudeAdjustment
+            )
+            fajr = adjustedTimes.first
+            isha = adjustedTimes.second
+        }
 
         return PrayerTimes(fajr, sunrise, dhuhr, asr, maghrib, isha).also {
             Log.d(TAG, "Calculated prayer times: $it")
@@ -121,9 +133,12 @@ class PrayerTimeCalculator {
         val angleRad = angle * PI / 180
 
         val cosT = (sin(angleRad) - sin(lat) * sin(decl)) / (cos(lat) * cos(decl))
-        val t = acos(cosT) * 180 / PI
+        
+        // Handle cases where cosT is outside valid range
+        val clampedCosT = cosT.coerceIn(-1.0, 1.0)
+        val t = acos(clampedCosT) * 180 / PI
 
-        val time = 12 + t / 15 - sunPosition.equationOfTime / 60
+        val time = 12 + t / 15 - sunPosition.equationOfTime / 60 + location.longitude / 15
         val hours = floor(time)
         val minutes = (time - hours) * 60
 
@@ -135,6 +150,75 @@ class PrayerTimeCalculator {
             set(Calendar.MINUTE, minutes.toInt())
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
+            // Ensure we're using the local timezone
+            timeZone = TimeZone.getDefault()
         }.time
+    }
+
+    private fun applyHighLatitudeAdjustment(
+        latitude: Double,
+        fajr: Date,
+        sunrise: Date,
+        dhuhr: Date,
+        asr: Date,
+        maghrib: Date,
+        isha: Date,
+        adjustment: com.prayertimes.app.HighLatitudeAdjustment
+    ): Pair<Date, Date> {
+        val absLatitude = abs(latitude)
+        
+        // Only apply adjustments for latitudes above 48 degrees
+        if (absLatitude < 48) {
+            return Pair(fajr, isha)
+        }
+
+        val calendar = Calendar.getInstance()
+        val dayLength = maghrib.time - sunrise.time
+        val nightLength = 24 * 60 * 60 * 1000 - dayLength
+
+        return when (adjustment) {
+            com.prayertimes.app.HighLatitudeAdjustment.MIDDLE_NIGHT -> {
+                val midnight = Calendar.getInstance().apply {
+                    time = dhuhr
+                    add(Calendar.HOUR_OF_DAY, 12)
+                }.time
+                
+                val fajrAdjustment = (nightLength / 2) - (fajr.time - maghrib.time)
+                val ishaAdjustment = (nightLength / 2) - (sunrise.time - isha.time)
+                
+                val adjustedFajr = Date(fajr.time + fajrAdjustment)
+                val adjustedIsha = Date(isha.time - ishaAdjustment)
+                
+                Pair(adjustedFajr, adjustedIsha)
+            }
+            
+            com.prayertimes.app.HighLatitudeAdjustment.ONE_SEVENTH -> {
+                val fajrAdjustment = nightLength / 7
+                val ishaAdjustment = nightLength / 7
+                
+                val adjustedFajr = Date(fajr.time + fajrAdjustment)
+                val adjustedIsha = Date(isha.time - ishaAdjustment)
+                
+                Pair(adjustedFajr, adjustedIsha)
+            }
+            
+            com.prayertimes.app.HighLatitudeAdjustment.ANGLE_BASED -> {
+                // For angle-based adjustment, we use fixed angles
+                val fajrAngle = if (absLatitude >= 60) 19.0 else 18.0
+                val ishaAngle = if (absLatitude >= 60) 18.0 else 17.0
+                
+                // Recalculate with adjusted angles
+                val calendar = Calendar.getInstance().apply { time = dhuhr }
+                val sunPosition = calculateSunPosition(getJulianDate(calendar))
+                val location = Location("").apply { this.latitude = latitude }
+                
+                val adjustedFajr = calculateTime(calendar, location, fajrAngle, sunPosition)
+                val adjustedIsha = calculateTime(calendar, location, ishaAngle, sunPosition)
+                
+                Pair(adjustedFajr, adjustedIsha)
+            }
+            
+            com.prayertimes.app.HighLatitudeAdjustment.NONE -> Pair(fajr, isha)
+        }
     }
 } 

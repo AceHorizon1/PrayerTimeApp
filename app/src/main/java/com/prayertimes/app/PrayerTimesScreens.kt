@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 data class PrayerTime(
     val name: String,
@@ -238,6 +239,16 @@ fun PrayerTimesScreen(
 
 @Composable
 fun NextPrayerCard(prayer: PrayerTime) {
+    var timeRemaining by remember { mutableStateOf("") }
+    
+    // Update time remaining every second
+    LaunchedEffect(prayer) {
+        while (true) {
+            timeRemaining = formatTimeRemaining(prayer.time)
+            kotlinx.coroutines.delay(1000) // Update every second
+        }
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,6 +276,12 @@ fun NextPrayerCard(prayer: PrayerTime) {
                 text = formatTime(prayer.time),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = timeRemaining,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.secondary
             )
         }
     }
@@ -306,11 +323,16 @@ fun CurrentPrayerCard(prayer: PrayerTime) {
 
 @Composable
 fun PrayerTimeItem(prayer: PrayerTime) {
+    val isActive = isPrayerTimeActive(prayer)
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 3.dp else 1.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+        )
     ) {
         Row(
             modifier = Modifier
@@ -321,12 +343,13 @@ fun PrayerTimeItem(prayer: PrayerTime) {
         ) {
             Text(
                 text = prayer.name,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = formatTime(prayer.time),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -336,6 +359,31 @@ private fun formatTime(date: Date): String {
     val formatter = SimpleDateFormat("h:mm a", Locale.getDefault())
     formatter.timeZone = TimeZone.getDefault()
     return formatter.format(date)
+}
+
+private fun formatTimeRemaining(targetTime: Date): String {
+    val now = Calendar.getInstance().time
+    val diff = targetTime.time - now.time
+    
+    if (diff <= 0) {
+        return "Now"
+    }
+    
+    val hours = diff / (1000 * 60 * 60)
+    val minutes = (diff % (1000 * 60 * 60)) / (1000 * 60)
+    
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m"
+        else -> "Less than 1m"
+    }
+}
+
+private fun isPrayerTimeActive(prayerTime: PrayerTime): Boolean {
+    val now = Calendar.getInstance().time
+    val diff = abs(prayerTime.time.time - now.time)
+    // Consider prayer time active if within 10 minutes
+    return diff <= 10 * 60 * 1000
 }
 
 @Composable

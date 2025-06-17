@@ -120,7 +120,8 @@ class PrayerTimesManager(private val context: Context) {
                 asrMethod = if (asrMethod == AsrMethod.HANAFI) 
                     PrayerTimeCalculator.AsrMethod.HANAFI 
                 else 
-                    PrayerTimeCalculator.AsrMethod.STANDARD
+                    PrayerTimeCalculator.AsrMethod.STANDARD,
+                highLatitudeAdjustment = highLatitudeAdjustment
             )
 
             listOf(

@@ -2,7 +2,7 @@ package com.prayertimes.app.calculator;
 
 import java.lang.System;
 
-@kotlin.Metadata(mv = {1, 8, 0}, k = 1, d1 = {"\u0000F\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0002\n\u0002\u0010\u000e\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u0006\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\b\b\u0007\u0018\u00002\u00020\u0001:\u0004\u0019\u001a\u001b\u001cB\u0005\u00a2\u0006\u0002\u0010\u0002J,\u0010\u0005\u001a\u00020\u00062\u0006\u0010\u0007\u001a\u00020\b2\b\b\u0002\u0010\t\u001a\u00020\n2\b\b\u0002\u0010\u000b\u001a\u00020\f2\b\b\u0002\u0010\r\u001a\u00020\u000eJ\u0010\u0010\u000f\u001a\u00020\u00102\u0006\u0010\u0011\u001a\u00020\u0012H\u0002J(\u0010\u0013\u001a\u00020\n2\u0006\u0010\u0014\u001a\u00020\u00152\u0006\u0010\u0007\u001a\u00020\b2\u0006\u0010\u0016\u001a\u00020\u00122\u0006\u0010\u0017\u001a\u00020\u0010H\u0002J\u0010\u0010\u0018\u001a\u00020\u00122\u0006\u0010\u0014\u001a\u00020\u0015H\u0002R\u000e\u0010\u0003\u001a\u00020\u0004X\u0082D\u00a2\u0006\u0002\n\u0000\u00a8\u0006\u001d"}, d2 = {"Lcom/prayertimes/app/calculator/PrayerTimeCalculator;", "", "()V", "TAG", "", "calculatePrayerTimes", "Lcom/prayertimes/app/calculator/PrayerTimeCalculator$PrayerTimes;", "location", "Landroid/location/Location;", "date", "Ljava/util/Date;", "method", "Lcom/prayertimes/app/calculator/PrayerTimeCalculator$CalculationMethod;", "asrMethod", "Lcom/prayertimes/app/calculator/PrayerTimeCalculator$AsrMethod;", "calculateSunPosition", "Lcom/prayertimes/app/calculator/PrayerTimeCalculator$SunPosition;", "julianDate", "", "calculateTime", "calendar", "Ljava/util/Calendar;", "angle", "sunPosition", "getJulianDate", "AsrMethod", "CalculationMethod", "PrayerTimes", "SunPosition", "app_debug"})
+@kotlin.Metadata(mv = {1, 8, 0}, k = 1, d1 = {"\u0000V\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0002\n\u0002\u0010\u000e\n\u0000\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u0006\n\u0002\b\u0007\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\b\b\b\u0007\u0018\u00002\u00020\u0001:\u0004%&\'(B\u0005\u00a2\u0006\u0002\u0010\u0002JT\u0010\u0005\u001a\u000e\u0012\u0004\u0012\u00020\u0007\u0012\u0004\u0012\u00020\u00070\u00062\u0006\u0010\b\u001a\u00020\t2\u0006\u0010\n\u001a\u00020\u00072\u0006\u0010\u000b\u001a\u00020\u00072\u0006\u0010\f\u001a\u00020\u00072\u0006\u0010\r\u001a\u00020\u00072\u0006\u0010\u000e\u001a\u00020\u00072\u0006\u0010\u000f\u001a\u00020\u00072\u0006\u0010\u0010\u001a\u00020\u0011H\u0002J6\u0010\u0012\u001a\u00020\u00132\u0006\u0010\u0014\u001a\u00020\u00152\b\b\u0002\u0010\u0016\u001a\u00020\u00072\b\b\u0002\u0010\u0017\u001a\u00020\u00182\b\b\u0002\u0010\u0019\u001a\u00020\u001a2\b\b\u0002\u0010\u001b\u001a\u00020\u0011J\u0010\u0010\u001c\u001a\u00020\u001d2\u0006\u0010\u001e\u001a\u00020\tH\u0002J(\u0010\u001f\u001a\u00020\u00072\u0006\u0010 \u001a\u00020!2\u0006\u0010\u0014\u001a\u00020\u00152\u0006\u0010\"\u001a\u00020\t2\u0006\u0010#\u001a\u00020\u001dH\u0002J\u0010\u0010$\u001a\u00020\t2\u0006\u0010 \u001a\u00020!H\u0002R\u000e\u0010\u0003\u001a\u00020\u0004X\u0082D\u00a2\u0006\u0002\n\u0000\u00a8\u0006)"}, d2 = {"Lcom/prayertimes/app/calculator/PrayerTimeCalculator;", "", "()V", "TAG", "", "applyHighLatitudeAdjustment", "Lkotlin/Pair;", "Ljava/util/Date;", "latitude", "", "fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha", "adjustment", "Lcom/prayertimes/app/HighLatitudeAdjustment;", "calculatePrayerTimes", "Lcom/prayertimes/app/calculator/PrayerTimeCalculator$PrayerTimes;", "location", "Landroid/location/Location;", "date", "method", "Lcom/prayertimes/app/calculator/PrayerTimeCalculator$CalculationMethod;", "asrMethod", "Lcom/prayertimes/app/calculator/PrayerTimeCalculator$AsrMethod;", "highLatitudeAdjustment", "calculateSunPosition", "Lcom/prayertimes/app/calculator/PrayerTimeCalculator$SunPosition;", "julianDate", "calculateTime", "calendar", "Ljava/util/Calendar;", "angle", "sunPosition", "getJulianDate", "AsrMethod", "CalculationMethod", "PrayerTimes", "SunPosition", "app_debug"})
 public final class PrayerTimeCalculator {
     private final java.lang.String TAG = "PrayerTimeCalculator";
     
@@ -15,7 +15,8 @@ public final class PrayerTimeCalculator {
     android.location.Location location, @org.jetbrains.annotations.NotNull
     java.util.Date date, @org.jetbrains.annotations.NotNull
     com.prayertimes.app.calculator.PrayerTimeCalculator.CalculationMethod method, @org.jetbrains.annotations.NotNull
-    com.prayertimes.app.calculator.PrayerTimeCalculator.AsrMethod asrMethod) {
+    com.prayertimes.app.calculator.PrayerTimeCalculator.AsrMethod asrMethod, @org.jetbrains.annotations.NotNull
+    com.prayertimes.app.HighLatitudeAdjustment highLatitudeAdjustment) {
         return null;
     }
     
@@ -28,6 +29,10 @@ public final class PrayerTimeCalculator {
     }
     
     private final java.util.Date calculateTime(java.util.Calendar calendar, android.location.Location location, double angle, com.prayertimes.app.calculator.PrayerTimeCalculator.SunPosition sunPosition) {
+        return null;
+    }
+    
+    private final kotlin.Pair<java.util.Date, java.util.Date> applyHighLatitudeAdjustment(double latitude, java.util.Date fajr, java.util.Date sunrise, java.util.Date dhuhr, java.util.Date asr, java.util.Date maghrib, java.util.Date isha, com.prayertimes.app.HighLatitudeAdjustment adjustment) {
         return null;
     }
     
