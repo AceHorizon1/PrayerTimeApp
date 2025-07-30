@@ -103,38 +103,35 @@ class MainActivity : ComponentActivity() {
         }
         
         setContent {
-            PrayerTimesTheme(darkTheme = settingsManager.darkModeEnabled) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val context = LocalContext.current
-                    val scope = rememberCoroutineScope()
-                    
-                    // Initialize PrayerTimesManager if permissions are granted
-                    LaunchedEffect(Unit) {
-                        if (hasLocationPermission()) {
-                            Log.d(TAG, "Initializing PrayerTimesManager from LaunchedEffect")
-                            scope.launch {
-                                initializePrayerTimesManager()
-                            }
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                val scope = rememberCoroutineScope()
+                
+                // Initialize PrayerTimesManager if permissions are granted
+                LaunchedEffect(Unit) {
+                    if (hasLocationPermission()) {
+                        Log.d(TAG, "Initializing PrayerTimesManager from LaunchedEffect")
+                        scope.launch {
+                            initializePrayerTimesManager()
                         }
                     }
-                    
-                    // Cleanup when the composable is disposed
-                    DisposableEffect(Unit) {
-                        onDispose {
-                            Log.d(TAG, "DisposableEffect: Cleaning up location updates")
-                            try {
-                                locationManager.removeUpdates(locationListener)
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Error removing location updates in DisposableEffect", e)
-                            }
-                        }
-                    }
-                    
-                    PrayerTimesApp()
                 }
+                
+                // Cleanup when the composable is disposed
+                DisposableEffect(Unit) {
+                    onDispose {
+                        Log.d(TAG, "DisposableEffect: Cleaning up location updates")
+                        try {
+                            locationManager.removeUpdates(locationListener)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error removing location updates in DisposableEffect", e)
+                        }
+                    }
+                }
+                
+                PrayerTimesApp()
             }
         }
     }

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -36,8 +37,11 @@ fun PrayerTimesApp() {
     val settingsManager = remember { SettingsManager(context) }
     val prayerTimesManager = remember { PrayerTimesManager(context) }
     
+    // Make theme reactive to settings changes
+    val darkTheme by remember { derivedStateOf { settingsManager.darkModeEnabled } }
+    
     // Apply theme based on settings
-    PrayerTimesTheme(darkTheme = settingsManager.darkModeEnabled) {
+    PrayerTimesTheme(darkTheme = darkTheme) {
         Scaffold(
             bottomBar = {
                 BottomNavigationBar(navController)
