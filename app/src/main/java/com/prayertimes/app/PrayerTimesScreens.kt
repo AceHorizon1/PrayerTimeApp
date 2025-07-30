@@ -15,6 +15,11 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment as ComposeAlignment
+import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
@@ -424,6 +429,70 @@ enum class HighLatitudeAdjustment(val displayName: String) {
     ANGLE_BASED("Angle Based")
 }
 
+enum class TimeFormat(val displayName: String, val pattern: String) {
+    TWELVE_HOUR("12-Hour (AM/PM)", "hh:mm a"),
+    TWENTY_FOUR_HOUR("24-Hour", "HH:mm")
+}
+
+enum class DateFormat(val displayName: String, val pattern: String) {
+    SHORT("Short (MM/DD)", "MM/dd"),
+    MEDIUM("Medium (MMM DD)", "MMM dd"),
+    LONG("Long (MMMM DD)", "MMMM dd"),
+    FULL("Full (EEEE, MMMM DD)", "EEEE, MMMM dd")
+}
+
+enum class PrayerAdjustment(val displayName: String, val minutes: Int) {
+    NONE("No Adjustment", 0),
+    MINUS_5("5 minutes earlier", -5),
+    MINUS_10("10 minutes earlier", -10),
+    MINUS_15("15 minutes earlier", -15),
+    PLUS_5("5 minutes later", 5),
+    PLUS_10("10 minutes later", 10),
+    PLUS_15("15 minutes later", 15)
+}
+
+enum class FajrAngle(val displayName: String, val angle: Double) {
+    ANGLE_15("15° (ISNA)", 15.0),
+    ANGLE_18("18° (MWL)", 18.0),
+    ANGLE_18_5("18.5° (Umm Al-Qura)", 18.5),
+    ANGLE_19_5("19.5° (Egyptian)", 19.5),
+    ANGLE_20("20° (Singapore)", 20.0)
+}
+
+enum class IshaAngle(val displayName: String, val angle: Double) {
+    ANGLE_15("15° (ISNA)", 15.0),
+    ANGLE_17("17° (MWL)", 17.0),
+    ANGLE_17_5("17.5° (Egyptian/Kuwait)", 17.5),
+    ANGLE_18("18° (Karachi)", 18.0),
+    ANGLE_90("90 minutes after Maghrib", 90.0)
+}
+
+enum class MaghribMethod(val displayName: String) {
+    SUNSET("Sunset"),
+    SUNSET_PLUS_3("Sunset + 3 minutes"),
+    SUNSET_PLUS_5("Sunset + 5 minutes")
+}
+
+enum class DhuhrMethod(val displayName: String) {
+    TRANSIT("Solar Transit (Standard)"),
+    TRANSIT_PLUS_2("Transit + 2 minutes"),
+    TRANSIT_PLUS_5("Transit + 5 minutes")
+}
+
+enum class AsrShadowLength(val displayName: String, val factor: Double) {
+    SINGLE("Single Shadow (Shafi)", 1.0),
+    DOUBLE("Double Shadow (Hanafi)", 2.0)
+}
+
+enum class TimeZonePreference(val displayName: String, val offset: Int) {
+    LOCAL("Device Time Zone", 0),
+    UTC("UTC", 0),
+    EST("Eastern Time", -5),
+    CST("Central Time", -6),
+    MST("Mountain Time", -7),
+    PST("Pacific Time", -8)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -473,7 +542,7 @@ fun SettingsScreen(
                         onCheckedChange = { notificationsEnabled = it }
                     )
                 }
-                // Only show "Remind 5 minutes before" if notifications are enabled
+                // Only show notification offset if notifications are enabled
                 if (notificationsEnabled) {
                     Row(
                         modifier = Modifier
@@ -483,10 +552,9 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Remind 5 minutes before",
+                            text = "Remind ${settingsManager?.notificationOffset ?: 5} minutes before",
                             style = MaterialTheme.typography.bodyLarge
                         )
-                        // This is a static 5 min reminder for now
                         Icon(Icons.Default.AccessTime, contentDescription = null)
                     }
                 }
@@ -534,7 +602,12 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.End
             ) {
                 Button(
-                    onClick = { navController?.navigate("advanced_settings") },
+                    onClick = { 
+                        println("Advanced Settings button clicked!")
+                        navController?.navigate("advanced_settings") {
+                            launchSingleTop = true
+                        }
+                    },
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Text("Advanced Settings")
@@ -553,11 +626,17 @@ fun AdvancedSettingsScreen(
     settingsManager: SettingsManager? = null,
     navController: NavController? = null
 ) {
+    println("AdvancedSettingsScreen is being called!")
+    
+    LaunchedEffect(Unit) {
+        println("AdvancedSettingsScreen LaunchedEffect triggered!")
+    }
+    
     var calculationMethod by remember { mutableStateOf(settingsManager?.calculationMethod ?: CalculationMethod.MUSLIM_WORLD_LEAGUE) }
     var asrMethod by remember { mutableStateOf(settingsManager?.asrMethod ?: AsrMethod.STANDARD) }
     var highLatitudeAdjustment by remember { mutableStateOf(settingsManager?.highLatitudeAdjustment ?: HighLatitudeAdjustment.NONE) }
     var notificationOffset by remember { mutableStateOf(settingsManager?.notificationOffset ?: 5) }
-
+    
     // Dropdown expanded states
     var calcDropdownExpanded by remember { mutableStateOf(false) }
     var asrDropdownExpanded by remember { mutableStateOf(false) }
@@ -600,138 +679,137 @@ fun AdvancedSettingsScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp)
         ) {
-        
-        // Calculation Method Section
-        item {
-            SettingsSection(title = "Calculation Method") {
-                ExposedDropdownMenuBox(
-                    expanded = calcDropdownExpanded,
-                    onExpandedChange = { calcDropdownExpanded = !calcDropdownExpanded }
-                ) {
-                    TextField(
-                        value = calculationMethod.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Calculation Method") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = calcDropdownExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
+            // Calculation Method Section
+            item {
+                SettingsSection(title = "Calculation Method") {
+                    ExposedDropdownMenuBox(
                         expanded = calcDropdownExpanded,
-                        onDismissRequest = { calcDropdownExpanded = false }
+                        onExpandedChange = { calcDropdownExpanded = !calcDropdownExpanded }
                     ) {
-                        CalculationMethod.values().forEach { method ->
-                            DropdownMenuItem(
-                                text = { Text(method.displayName) },
-                                onClick = {
-                                    calculationMethod = method
-                                    calcDropdownExpanded = false
-                                }
-                            )
+                        TextField(
+                            value = calculationMethod.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Calculation Method") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = calcDropdownExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = calcDropdownExpanded,
+                            onDismissRequest = { calcDropdownExpanded = false }
+                        ) {
+                            CalculationMethod.values().forEach { method ->
+                                DropdownMenuItem(
+                                    text = { Text(method.displayName) },
+                                    onClick = {
+                                        calculationMethod = method
+                                        calcDropdownExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        // Asr Method Section
-        item {
-            SettingsSection(title = "Asr Method") {
-                ExposedDropdownMenuBox(
-                    expanded = asrDropdownExpanded,
-                    onExpandedChange = { asrDropdownExpanded = !asrDropdownExpanded }
-                ) {
-                    TextField(
-                        value = asrMethod.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Asr Method") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = asrDropdownExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
+            
+            // Asr Method Section
+            item {
+                SettingsSection(title = "Asr Method") {
+                    ExposedDropdownMenuBox(
                         expanded = asrDropdownExpanded,
-                        onDismissRequest = { asrDropdownExpanded = false }
+                        onExpandedChange = { asrDropdownExpanded = !asrDropdownExpanded }
                     ) {
-                        AsrMethod.values().forEach { method ->
-                            DropdownMenuItem(
-                                text = { Text(method.displayName) },
-                                onClick = {
-                                    asrMethod = method
-                                    asrDropdownExpanded = false
-                                }
-                            )
+                        TextField(
+                            value = asrMethod.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Asr Method") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = asrDropdownExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = asrDropdownExpanded,
+                            onDismissRequest = { asrDropdownExpanded = false }
+                        ) {
+                            AsrMethod.values().forEach { method ->
+                                DropdownMenuItem(
+                                    text = { Text(method.displayName) },
+                                    onClick = {
+                                        asrMethod = method
+                                        asrDropdownExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        // High Latitude Adjustment Section
-        item {
-            SettingsSection(title = "High Latitude Adjustment") {
-                ExposedDropdownMenuBox(
-                    expanded = highLatDropdownExpanded,
-                    onExpandedChange = { highLatDropdownExpanded = !highLatDropdownExpanded }
-                ) {
-                    TextField(
-                        value = highLatitudeAdjustment.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("High Latitude Adjustment") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = highLatDropdownExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
+            
+            // High Latitude Adjustment Section
+            item {
+                SettingsSection(title = "High Latitude Adjustment") {
+                    ExposedDropdownMenuBox(
                         expanded = highLatDropdownExpanded,
-                        onDismissRequest = { highLatDropdownExpanded = false }
+                        onExpandedChange = { highLatDropdownExpanded = !highLatDropdownExpanded }
                     ) {
-                        HighLatitudeAdjustment.values().forEach { adjustment ->
-                            DropdownMenuItem(
-                                text = { Text(adjustment.displayName) },
-                                onClick = {
-                                    highLatitudeAdjustment = adjustment
-                                    highLatDropdownExpanded = false
-                                }
-                            )
+                        TextField(
+                            value = highLatitudeAdjustment.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("High Latitude Adjustment") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = highLatDropdownExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = highLatDropdownExpanded,
+                            onDismissRequest = { highLatDropdownExpanded = false }
+                        ) {
+                            HighLatitudeAdjustment.values().forEach { adjustment ->
+                                DropdownMenuItem(
+                                    text = { Text(adjustment.displayName) },
+                                    onClick = {
+                                        highLatitudeAdjustment = adjustment
+                                        highLatDropdownExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        // Notification Offset Section
-        item {
-            SettingsSection(title = "Notification Offset") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Notify $notificationOffset minutes before",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Row {
-                        IconButton(onClick = { if (notificationOffset > 0) notificationOffset -= 5 }) {
-                            Icon(Icons.Default.Delete, "Decrease")
-                        }
+            
+            // Notification Offset Section
+            item {
+                SettingsSection(title = "Notification Offset") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "$notificationOffset",
+                            text = "Notify $notificationOffset minutes before",
                             style = MaterialTheme.typography.bodyLarge
                         )
-                        IconButton(onClick = { if (notificationOffset < 30) notificationOffset += 5 }) {
-                            Icon(Icons.Default.Add, "Increase")
+                        Row {
+                            IconButton(onClick = { if (notificationOffset > 0) notificationOffset -= 5 }) {
+                                Icon(Icons.Default.Delete, "Decrease")
+                            }
+                            Text(
+                                text = "$notificationOffset",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            IconButton(onClick = { if (notificationOffset < 30) notificationOffset += 5 }) {
+                                Icon(Icons.Default.Add, "Increase")
+                            }
                         }
                     }
                 }
             }
         }
-        }
     }
-}
+} 
 
 @Composable
 private fun SettingsSection(

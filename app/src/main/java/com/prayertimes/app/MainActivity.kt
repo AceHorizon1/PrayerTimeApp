@@ -133,16 +133,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     
-                    MainScreen(
-                        prayerTimesManager = if (::prayerTimesManager.isInitialized) {
-                            Log.d(TAG, "Providing initialized PrayerTimesManager to MainScreen")
-                            prayerTimesManager
-                        } else {
-                            Log.d(TAG, "PrayerTimesManager not initialized yet")
-                            null
-                        },
-                        settingsManager = settingsManager
-                    )
+                    PrayerTimesApp()
                 }
             }
         }
@@ -184,39 +175,4 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun MainScreen(
-    prayerTimesManager: PrayerTimesManager?,
-    settingsManager: SettingsManager
-) {
-    var selectedTab by remember { mutableStateOf(0) }
-    
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.AccessTime, contentDescription = "Prayer Times") },
-                    label = { Text("Prayer Times") },
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") },
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
-                )
-            }
-        }
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
-            when (selectedTab) {
-                0 -> PrayerTimesScreen(prayerTimesManager = prayerTimesManager, settingsManager = settingsManager)
-                1 -> SettingsScreen(
-                    prayerTimesManager = prayerTimesManager,
-                    settingsManager = settingsManager
-                )
-            }
-        }
-    }
-} 
+ 

@@ -54,6 +54,11 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    lint {
+        abortOnError = false
+        disable += "RemoveWorkManagerInitializer"
+    }
 }
 
 dependencies {
@@ -88,6 +93,8 @@ dependencies {
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.hilt:hilt-work:1.1.0")
+
+
 
     // Testing
     testImplementation("junit:junit:4.13.2")

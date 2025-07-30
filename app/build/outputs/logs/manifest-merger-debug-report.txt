@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:2:1-40:12
-INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:2:1-40:12
-INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:2:1-40:12
-INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:2:1-40:12
+ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:2:1-29:12
+INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:2:1-29:12
+INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:2:1-29:12
+INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:2:1-29:12
 MERGED from [androidx.compose.material3:material3:1.1.1] /Users/ayaanniaz/.gradle/caches/8.14/transforms/d5c028b24543282aedf9b38d99feae69/transformed/material3-1.1.1/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-common:2.7.7] /Users/ayaanniaz/.gradle/caches/8.14/transforms/082d591007471a2d4d143b51f5fddcbe/transformed/navigation-common-2.7.7/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-runtime:2.7.7] /Users/ayaanniaz/.gradle/caches/8.14/transforms/2f7d3ec7cbe500168c4a27895cd4ec72/transformed/navigation-runtime-2.7.7/AndroidManifest.xml:17:1-22:12
@@ -93,8 +93,8 @@ ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main
 	android:name
 		ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:7:22-78
 application
-ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:9:5-38:19
-INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:9:5-38:19
+ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:9:5-27:19
+INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:9:5-27:19
 MERGED from [androidx.work:work-runtime:2.9.0] /Users/ayaanniaz/.gradle/caches/8.14/transforms/9e908f3aba3c40947a16eca2053624d8/transformed/work-runtime-2.9.0/AndroidManifest.xml:28:5-143:19
 MERGED from [androidx.work:work-runtime:2.9.0] /Users/ayaanniaz/.gradle/caches/8.14/transforms/9e908f3aba3c40947a16eca2053624d8/transformed/work-runtime-2.9.0/AndroidManifest.xml:28:5-143:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.5.1] /Users/ayaanniaz/.gradle/caches/8.14/transforms/f297c5984a4b4bd7fde2b7de1ecf8119/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
@@ -153,16 +153,6 @@ category#android.intent.category.LAUNCHER
 ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:24:17-77
 	android:name
 		ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:24:27-74
-activity#com.prayertimes.app.debug.ApiTestActivity
-ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:28:9-37:20
-	android:label
-		ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:31:13-50
-	android:exported
-		ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:30:13-36
-	android:theme
-		ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:32:13-56
-	android:name
-		ADDED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml:29:13-50
 uses-sdk
 INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/ayaanniaz/Documents/Cursor/PrayerTimesApp-Android/app/src/main/AndroidManifest.xml

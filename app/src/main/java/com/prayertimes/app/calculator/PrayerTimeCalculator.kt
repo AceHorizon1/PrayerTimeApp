@@ -8,26 +8,20 @@ import kotlin.math.*
 class PrayerTimeCalculator {
     private val TAG = "PrayerTimeCalculator"
 
-    // Prayer time calculation methods
-    enum class CalculationMethod(val fajrAngle: Double, val ishaAngle: Double) {
-        MUSLIM_WORLD_LEAGUE(18.0, 17.0),
-        ISNA(15.0, 15.0),
-        EGYPTIAN(19.5, 17.5),
-        KARACHI(18.0, 18.0),
-        TEHRAN(17.7, 14.0),
-        SHIA(16.0, 14.0),
-        GULF(19.0, 22.0),
-        KUWAIT(18.0, 17.5),
-        QATAR(18.0, 18.0),
-        SINGAPORE(20.0, 18.0),
-        NORTH_AMERICA(15.0, 15.0),
-        DUBAI(18.2, 18.2),
-        MOONSIGHTING(18.0, 18.0)
+    // Prayer time calculation methods based on PrayTimes.js
+    enum class CalculationMethod(val displayName: String, val fajrAngle: Double, val ishaAngle: Double) {
+        MWL("Muslim World League", 18.0, 17.0),
+        ISNA("Islamic Society of North America (ISNA)", 15.0, 15.0),
+        EGYPT("Egyptian General Authority of Survey", 19.5, 17.5),
+        MAKKAH("Umm Al-Qura University, Makkah", 18.5, 90.0), // isha is 90 minutes after maghrib
+        KARACHI("University of Islamic Sciences, Karachi", 18.0, 18.0),
+        TEHRAN("Institute of Geophysics, University of Tehran", 17.7, 14.0),
+        JAFARI("Shia Ithna-Ashari, Leva Institute, Qum", 16.0, 14.0)
     }
 
     enum class AsrMethod {
-        STANDARD, // Shafi'i, Maliki, Hanbali
-        HANAFI
+        STANDARD, // Shafi`i, Maliki, Ja`fari, Hanbali
+        HANAFI    // Hanafi
     }
 
     data class PrayerTimes(
@@ -42,183 +36,245 @@ class PrayerTimeCalculator {
     fun calculatePrayerTimes(
         location: Location,
         date: Date = Date(),
-        method: CalculationMethod = CalculationMethod.MUSLIM_WORLD_LEAGUE,
-        asrMethod: AsrMethod = AsrMethod.STANDARD,
-        highLatitudeAdjustment: com.prayertimes.app.HighLatitudeAdjustment = com.prayertimes.app.HighLatitudeAdjustment.NONE
+        method: CalculationMethod = CalculationMethod.MWL,
+        asrMethod: AsrMethod = AsrMethod.STANDARD
     ): PrayerTimes {
         Log.d(TAG, "Calculating prayer times for location: ${location.latitude}, ${location.longitude}")
-        Log.d(TAG, "Using calculation method: $method, Asr method: $asrMethod, High latitude adjustment: $highLatitudeAdjustment")
+        Log.d(TAG, "Using calculation method: $method, Asr method: $asrMethod")
 
-        val calendar = Calendar.getInstance().apply {
-            time = date
-        }
+        val calendar = Calendar.getInstance().apply { time = date }
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH) + 1
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-        // Get Julian date
-        val julianDate = getJulianDate(calendar)
-        Log.d(TAG, "Julian date: $julianDate")
+        val lat = location.latitude
+        val lng = location.longitude
+        val elv = location.altitude
 
-        // Calculate sun position
-        val sunPosition = calculateSunPosition(julianDate)
-        Log.d(TAG, "Sun position - declination: ${sunPosition.declination}, equation of time: ${sunPosition.equationOfTime}")
+        val jDate = julian(year, month, day) - lng / (15 * 24)
+        val timeZone = getTimeZone(date)
+        val dst = getDst(date)
+        val tz = timeZone + (if (dst != 0.0) 1 else 0)
 
-        // Calculate prayer times
-        var fajr = calculateTime(calendar, location, method.fajrAngle, sunPosition)
-        val sunrise = calculateTime(calendar, location, 0.833, sunPosition) // Sunrise angle
-        val dhuhr = calculateTime(calendar, location, 90.0, sunPosition) // Solar noon
-        val asrAngle = if (asrMethod == AsrMethod.HANAFI) 120.0 else 105.0
-        val asr = calculateTime(calendar, location, asrAngle, sunPosition)
-        val maghrib = calculateTime(calendar, location, 0.833, sunPosition) // Sunset angle
-        var isha = calculateTime(calendar, location, method.ishaAngle, sunPosition)
-
-        // Apply high latitude adjustments
-        if (highLatitudeAdjustment != com.prayertimes.app.HighLatitudeAdjustment.NONE) {
-            val adjustedTimes = applyHighLatitudeAdjustment(
-                location.latitude,
-                fajr, sunrise, dhuhr, asr, maghrib, isha,
-                highLatitudeAdjustment
-            )
-            fajr = adjustedTimes.first
-            isha = adjustedTimes.second
-        }
-
-        return PrayerTimes(fajr, sunrise, dhuhr, asr, maghrib, isha).also {
+        val times = computeTimes(jDate, lat, lng, elv, tz, method, asrMethod)
+        
+        return PrayerTimes(
+            fajr = parseTimeString(times["fajr"] ?: "", date),
+            sunrise = parseTimeString(times["sunrise"] ?: "", date),
+            dhuhr = parseTimeString(times["dhuhr"] ?: "", date),
+            asr = parseTimeString(times["asr"] ?: "", date),
+            maghrib = parseTimeString(times["maghrib"] ?: "", date),
+            isha = parseTimeString(times["isha"] ?: "", date)
+        ).also {
             Log.d(TAG, "Calculated prayer times: $it")
         }
     }
 
-    private fun getJulianDate(calendar: Calendar): Double {
-        val year = calendar.get(Calendar.YEAR)
-        val month = calendar.get(Calendar.MONTH) + 1 // Calendar months are 0-based
-        val day = calendar.get(Calendar.DAY_OF_MONTH)
+    private fun computeTimes(
+        jDate: Double, 
+        lat: Double, 
+        lng: Double, 
+        elv: Double, 
+        tz: Double,
+        method: CalculationMethod,
+        asrMethod: AsrMethod
+    ): Map<String, String> {
+        // Default times
+        var times = mapOf(
+            "imsak" to 5.0,
+            "fajr" to 5.0,
+            "sunrise" to 6.0,
+            "dhuhr" to 12.0,
+            "asr" to 13.0,
+            "sunset" to 18.0,
+            "maghrib" to 18.0,
+            "isha" to 18.0
+        )
 
+        // Main iterations
+        for (i in 1..1) {
+            times = computePrayerTimes(times, jDate, lat, elv, method, asrMethod)
+        }
+
+        times = adjustTimes(times, tz, lng, lat)
+        
+        return times.mapValues { (_, time) -> 
+            getFormattedTime(time, "24h") 
+        }
+    }
+
+    private fun computePrayerTimes(
+        times: Map<String, Double>, 
+        jDate: Double, 
+        lat: Double, 
+        elv: Double,
+        method: CalculationMethod,
+        asrMethod: AsrMethod
+    ): Map<String, Double> {
+        val dayPortion = times.mapValues { it.value / 24 }
+        
+        val fajrAngle = method.fajrAngle
+        val ishaAngle = method.ishaAngle
+        
+        val imsak = sunAngleTime(fajrAngle - 2, dayPortion["imsak"] ?: 0.0, jDate, lat, elv, "ccw")
+        val fajr = sunAngleTime(fajrAngle, dayPortion["fajr"] ?: 0.0, jDate, lat, elv, "ccw")
+        val sunrise = sunAngleTime(0.833, dayPortion["sunrise"] ?: 0.0, jDate, lat, elv, "ccw")
+        val dhuhr = midDay(dayPortion["dhuhr"] ?: 0.0, jDate)
+        val asr = asrTime(if (asrMethod == AsrMethod.HANAFI) 2.0 else 1.0, dayPortion["asr"] ?: 0.0, jDate, lat, elv)
+        val sunset = sunAngleTime(0.833, dayPortion["sunset"] ?: 0.0, jDate, lat, elv)
+        val maghrib = sunAngleTime(0.0, dayPortion["maghrib"] ?: 0.0, jDate, lat, elv)
+        val isha = if (method == CalculationMethod.MAKKAH) {
+            maghrib + (90.0 / 60.0) // 90 minutes after maghrib
+        } else {
+            sunAngleTime(ishaAngle, dayPortion["isha"] ?: 0.0, jDate, lat, elv)
+        }
+
+        return mapOf(
+            "imsak" to imsak,
+            "fajr" to fajr,
+            "sunrise" to sunrise,
+            "dhuhr" to dhuhr,
+            "asr" to asr,
+            "sunset" to sunset,
+            "maghrib" to maghrib,
+            "isha" to isha
+        )
+    }
+
+    private fun midDay(time: Double, jDate: Double): Double {
+        val eqt = sunPosition(jDate + time).equation
+        val noon = fixHour(12 - eqt)
+        return noon
+    }
+
+    private fun sunAngleTime(angle: Double, time: Double, jDate: Double, lat: Double, elv: Double, direction: String = "cw"): Double {
+        val decl = sunPosition(jDate + time).declination
+        val noon = midDay(time, jDate)
+        val latRad = dtr(lat)
+        val declRad = dtr(decl)
+        val angleRad = dtr(angle)
+        
+        val cosT = (-sin(angleRad) - sin(declRad) * sin(latRad)) / (cos(declRad) * cos(latRad))
+        val clampedCosT = cosT.coerceIn(-1.0, 1.0)
+        val t = arccos(clampedCosT) / 15.0
+        
+        return noon + (if (direction == "ccw") -t else t)
+    }
+
+    private fun asrTime(factor: Double, time: Double, jDate: Double, lat: Double, elv: Double): Double {
+        val decl = sunPosition(jDate + time).declination
+        val angle = -arccot(factor + tan(abs(lat - decl)))
+        return sunAngleTime(angle, time, jDate, lat, elv)
+    }
+
+    private data class SunPosition(val declination: Double, val equation: Double)
+
+    private fun sunPosition(jd: Double): SunPosition {
+        val D = jd - 2451545.0
+        val g = fixAngle(357.529 + (0.98560028 * D))
+        val q = fixAngle(280.459 + (0.98564736 * D))
+        val L = fixAngle(q + (1.915 * sin(g)) + (0.020 * sin(2.0 * g)))
+
+        val R = 1.00014 - (0.01671 * cos(g)) - (0.00014 * cos(2.0 * g))
+        val e = 23.439 - (0.00000036 * D)
+
+        val RA = arctan2(cos(e) * sin(L), cos(L)) / 15.0
+        val eqt = q / 15.0 - fixHour(RA)
+        val decl = arcsin(sin(e) * sin(L))
+
+        return SunPosition(decl, eqt)
+    }
+
+    private fun adjustTimes(times: Map<String, Double>, timeZone: Double, lng: Double, lat: Double): Map<String, Double> {
+        var adjustedTimes = times.toMutableMap()
+        
+        // Adjust for timezone and longitude
+        for (key in adjustedTimes.keys) {
+            adjustedTimes[key] = adjustedTimes[key]!! + timeZone - lng / 15
+        }
+
+        return adjustedTimes
+    }
+
+    private fun getFormattedTime(time: Double, format: String): String {
+        if (time.isNaN()) return "-----"
+        if (format == "Float") return time.toString()
+        
+        val roundedTime = fixHour(time + 0.5 / 60) // add 0.5 minutes to round
+        val hours = floor(roundedTime).toInt()
+        val minutes = floor((roundedTime - hours) * 60).toInt()
+        
+        return when (format) {
+            "24h" -> "${twoDigitsFormat(hours)}:${twoDigitsFormat(minutes)}"
+            "12h" -> {
+                val suffix = if (hours < 12) "am" else "pm"
+                val hour12 = if (hours == 0) 12 else if (hours > 12) hours - 12 else hours
+                "${hour12}:${twoDigitsFormat(minutes)} $suffix"
+            }
+            else -> "${twoDigitsFormat(hours)}:${twoDigitsFormat(minutes)}"
+        }
+    }
+
+    private fun parseTimeString(timeStr: String, baseDate: Date): Date {
+        if (timeStr == "-----") return baseDate
+        
+        val calendar = Calendar.getInstance().apply { time = baseDate }
+        
+        try {
+            val timeParts = timeStr.split(":")
+            val hour = timeParts[0].toInt()
+            val minute = timeParts[1].split(" ")[0].toInt()
+            
+            calendar.set(Calendar.HOUR_OF_DAY, hour)
+            calendar.set(Calendar.MINUTE, minute)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing time string: $timeStr", e)
+        }
+        
+        return calendar.time
+    }
+
+    // Utility functions
+    private fun julian(year: Int, month: Int, day: Int): Double {
         var y = year
         var m = month
         if (m <= 2) {
             y -= 1
             m += 12
         }
-
-        val a = floor(y / 100.0)
-        val b = 2 - a + floor(a / 4.0)
-
-        return floor(365.25 * (y + 4716)) + floor(30.6001 * (m + 1)) + day + b - 1524.5
+        val A = floor(y / 100.0)
+        val B = 2 - A + floor(A / 4.0)
+        return floor(365.25 * (y + 4716)) + floor(30.6001 * (m + 1)) + day + B - 1524.5
     }
 
-    private data class SunPosition(
-        val declination: Double,
-        val equationOfTime: Double
-    )
-
-    private fun calculateSunPosition(julianDate: Double): SunPosition {
-        val n = julianDate - 2451545.0
-        val L = 280.460 + 0.9856474 * n
-        val g = 357.528 + 0.9856003 * n
-        val λ = L + 1.915 * sin(g * PI / 180) + 0.020 * sin(2 * g * PI / 180)
-        val ε = 23.439 - 0.0000004 * n
-
-        val declination = asin(sin(ε * PI / 180) * sin(λ * PI / 180)) * 180 / PI
-        val equationOfTime = -1.915 * sin(g * PI / 180) - 0.020 * sin(2 * g * PI / 180)
-
-        return SunPosition(declination, equationOfTime)
+    private fun getTimeZone(date: Date): Double {
+        val calendar = Calendar.getInstance().apply { time = date }
+        return calendar.timeZone.getOffset(date.time) / (1000.0 * 60 * 60)
     }
 
-    private fun calculateTime(
-        calendar: Calendar,
-        location: Location,
-        angle: Double,
-        sunPosition: SunPosition
-    ): Date {
-        val lat = location.latitude * PI / 180
-        val decl = sunPosition.declination * PI / 180
-        val angleRad = angle * PI / 180
-
-        val cosT = (sin(angleRad) - sin(lat) * sin(decl)) / (cos(lat) * cos(decl))
-        
-        // Handle cases where cosT is outside valid range
-        val clampedCosT = cosT.coerceIn(-1.0, 1.0)
-        val t = acos(clampedCosT) * 180 / PI
-
-        val time = 12 + t / 15 - sunPosition.equationOfTime / 60 + location.longitude / 15
-        val hours = floor(time)
-        val minutes = (time - hours) * 60
-
-        return Calendar.getInstance().apply {
-            set(Calendar.YEAR, calendar.get(Calendar.YEAR))
-            set(Calendar.MONTH, calendar.get(Calendar.MONTH))
-            set(Calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH))
-            set(Calendar.HOUR_OF_DAY, hours.toInt())
-            set(Calendar.MINUTE, minutes.toInt())
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            // Ensure we're using the local timezone
-            timeZone = TimeZone.getDefault()
-        }.time
+    private fun getDst(date: Date): Double {
+        val calendar = Calendar.getInstance().apply { time = date }
+        return if (calendar.timeZone.useDaylightTime()) 1.0 else 0.0
     }
 
-    private fun applyHighLatitudeAdjustment(
-        latitude: Double,
-        fajr: Date,
-        sunrise: Date,
-        dhuhr: Date,
-        asr: Date,
-        maghrib: Date,
-        isha: Date,
-        adjustment: com.prayertimes.app.HighLatitudeAdjustment
-    ): Pair<Date, Date> {
-        val absLatitude = abs(latitude)
-        
-        // Only apply adjustments for latitudes above 48 degrees
-        if (absLatitude < 48) {
-            return Pair(fajr, isha)
-        }
-
-        val calendar = Calendar.getInstance()
-        val dayLength = maghrib.time - sunrise.time
-        val nightLength = 24 * 60 * 60 * 1000 - dayLength
-
-        return when (adjustment) {
-            com.prayertimes.app.HighLatitudeAdjustment.MIDDLE_NIGHT -> {
-                val midnight = Calendar.getInstance().apply {
-                    time = dhuhr
-                    add(Calendar.HOUR_OF_DAY, 12)
-                }.time
-                
-                val fajrAdjustment = (nightLength / 2) - (fajr.time - maghrib.time)
-                val ishaAdjustment = (nightLength / 2) - (sunrise.time - isha.time)
-                
-                val adjustedFajr = Date(fajr.time + fajrAdjustment)
-                val adjustedIsha = Date(isha.time - ishaAdjustment)
-                
-                Pair(adjustedFajr, adjustedIsha)
-            }
-            
-            com.prayertimes.app.HighLatitudeAdjustment.ONE_SEVENTH -> {
-                val fajrAdjustment = nightLength / 7
-                val ishaAdjustment = nightLength / 7
-                
-                val adjustedFajr = Date(fajr.time + fajrAdjustment)
-                val adjustedIsha = Date(isha.time - ishaAdjustment)
-                
-                Pair(adjustedFajr, adjustedIsha)
-            }
-            
-            com.prayertimes.app.HighLatitudeAdjustment.ANGLE_BASED -> {
-                // For angle-based adjustment, we use fixed angles
-                val fajrAngle = if (absLatitude >= 60) 19.0 else 18.0
-                val ishaAngle = if (absLatitude >= 60) 18.0 else 17.0
-                
-                // Recalculate with adjusted angles
-                val calendar = Calendar.getInstance().apply { time = dhuhr }
-                val sunPosition = calculateSunPosition(getJulianDate(calendar))
-                val location = Location("").apply { this.latitude = latitude }
-                
-                val adjustedFajr = calculateTime(calendar, location, fajrAngle, sunPosition)
-                val adjustedIsha = calculateTime(calendar, location, ishaAngle, sunPosition)
-                
-                Pair(adjustedFajr, adjustedIsha)
-            }
-            
-            com.prayertimes.app.HighLatitudeAdjustment.NONE -> Pair(fajr, isha)
-        }
+    // Math utility functions
+    private fun dtr(d: Double): Double = (d * PI) / 180.0
+    private fun rtd(r: Double): Double = (r * 180.0) / PI
+    private fun sin(d: Double): Double = kotlin.math.sin(dtr(d))
+    private fun cos(d: Double): Double = kotlin.math.cos(dtr(d))
+    private fun tan(d: Double): Double = kotlin.math.tan(dtr(d))
+    private fun arcsin(d: Double): Double = rtd(kotlin.math.asin(d))
+    private fun arccos(d: Double): Double = rtd(kotlin.math.acos(d))
+    private fun arctan(d: Double): Double = rtd(kotlin.math.atan(d))
+    private fun arccot(x: Double): Double = rtd(kotlin.math.atan(1.0 / x))
+    private fun arctan2(y: Double, x: Double): Double = rtd(kotlin.math.atan2(y, x))
+    private fun fixAngle(a: Double): Double = fix(a, 360.0)
+    private fun fixHour(a: Double): Double = fix(a, 24.0)
+    private fun fix(a: Double, b: Double): Double {
+        var result = a - b * floor(a / b)
+        return if (result < 0) result + b else result
     }
+    private fun twoDigitsFormat(num: Int): String = if (num < 10) "0$num" else num.toString()
 } 

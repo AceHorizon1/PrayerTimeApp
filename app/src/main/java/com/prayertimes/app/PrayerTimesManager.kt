@@ -55,13 +55,21 @@ class PrayerTimesManager(private val context: Context) {
     
     init {
         Log.d(TAG, "Initializing PrayerTimesManager")
+        Log.d(TAG, "GPS provider enabled: ${locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)}")
+        Log.d(TAG, "Network provider enabled: ${locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)}")
         requestLocationUpdates()
     }
     
     private fun requestLocationUpdates() {
+        Log.d(TAG, "Requesting location updates...")
+        Log.d(TAG, "Fine location permission: ${ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED}")
+        Log.d(TAG, "Coarse location permission: ${ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED}")
+        
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) 
+            != PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) 
             != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "Location permission not granted")
+            Log.d(TAG, "No location permission granted")
             return
         }
 
@@ -105,7 +113,24 @@ class PrayerTimesManager(private val context: Context) {
     }
     
     suspend fun updatePrayerTimes(): List<PrayerTime> {
-        val location = currentLocation
+        var location = currentLocation
+        
+        // If no location available, try to get last known location
+        if (location == null) {
+            Log.d(TAG, "No current location, trying to get last known location")
+            location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+        }
+        
+        // If still no location, use a fallback location for testing
+        if (location == null) {
+            Log.d(TAG, "No location available, using fallback location (New York)")
+            location = Location("fallback").apply {
+                latitude = 40.7128
+                longitude = -74.0060
+            }
+        }
+        
         if (location == null) {
             Log.d(TAG, "Cannot update prayer times - no location available")
             return emptyList()

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.1.0" type="partial_results">
+    <map id="UnsafeIntentLaunch">
+            <map id="unprotected">
+                <entry
+                    name="com.prayertimes.app.MainActivity"
+                    boolean="true"/>
+            </map>
+    </map>
+    <map id="UnusedResources">
+        <location id="R.color.black"
+            file="${:app*debug*sourceProvider*0*resDir*0}/values/colors.xml"
+            line="8"
+            column="12"
+            startOffset="293"
+            endLine="8"
+            endColumn="24"
+            endOffset="305"/>
+        <location id="R.color.teal_700"
+            file="${:app*debug*sourceProvider*0*resDir*0}/values/colors.xml"
+            line="7"
+            column="12"
+            startOffset="248"
+            endLine="7"
+            endColumn="27"
+            endOffset="263"/>
+        <location id="R.color.white"
+            file="${:app*debug*sourceProvider*0*resDir*0}/values/colors.xml"
+            line="9"
+            column="12"
+            startOffset="335"
+            endLine="9"
+            endColumn="24"
+            endOffset="347"/>
+        <location id="R.color.purple_200"
+            file="${:app*debug*sourceProvider*0*resDir*0}/values/colors.xml"
+            line="3"
+            column="12"
+            startOffset="62"
+            endLine="3"
+            endColumn="29"
+            endOffset="79"/>
+        <entry
+            name="model"
+            string="color[purple_200(D),black(D),teal_200(U),white(D),teal_700(D),ic_launcher_background(U),purple_700(U),purple_500(U)],drawable[ic_launcher_foreground(U)],mipmap[ic_launcher_round(U),ic_launcher(U)],string[app_name(U)],style[Theme_PrayerTimesApp(U)];9^5^8,a^5^8,c^7^6^2;;;"/>
+    </map>
+
+</incidents>
