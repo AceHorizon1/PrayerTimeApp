@@ -10,7 +10,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.prayertimes.app.calculator.PrayerTimeCalculator
+import com.prayertimes.app.calculator.AdhanPrayerTimeCalculator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,8 +23,7 @@ class PrayerTimesManager(private val context: Context) {
     private var currentLocation: Location? = null
     private var calculationMethod: CalculationMethod = CalculationMethod.MUSLIM_WORLD_LEAGUE
     private var asrMethod: AsrMethod = AsrMethod.STANDARD
-    private var highLatitudeAdjustment: HighLatitudeAdjustment = HighLatitudeAdjustment.NONE
-    private val calculator = PrayerTimeCalculator()
+    private val calculator = AdhanPrayerTimeCalculator()
     private val scope = CoroutineScope(Dispatchers.IO)
     
     private val kaabaLocation = Location("").apply {
@@ -116,12 +115,8 @@ class PrayerTimesManager(private val context: Context) {
         return try {
             val times = calculator.calculatePrayerTimes(
                 location = location,
-                method = calculationMethod.toCalculatorMethod(),
-                asrMethod = if (asrMethod == AsrMethod.HANAFI) 
-                    PrayerTimeCalculator.AsrMethod.HANAFI 
-                else 
-                    PrayerTimeCalculator.AsrMethod.STANDARD,
-                highLatitudeAdjustment = highLatitudeAdjustment
+                method = calculationMethod.toAdhanCalculatorMethod(),
+                asrMethod = asrMethod.toAdhanAsrMethod()
             )
 
             listOf(
@@ -132,7 +127,7 @@ class PrayerTimesManager(private val context: Context) {
                 PrayerTime("Maghrib", times.maghrib),
                 PrayerTime("Isha", times.isha)
             ).also {
-                Log.d(TAG, "Calculated prayer times: $it")
+                Log.d(TAG, "Calculated prayer times using Adhan: $it")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error calculating prayer times", e)
@@ -140,24 +135,7 @@ class PrayerTimesManager(private val context: Context) {
         }
     }
     
-    fun calculateQiblaDirection(): Double? {
-        val location = currentLocation ?: return null
-        
-        val lat1 = location.latitude * PI / 180
-        val lon1 = location.longitude * PI / 180
-        val lat2 = kaabaLocation.latitude * PI / 180
-        val lon2 = kaabaLocation.longitude * PI / 180
-        
-        val y = sin(lon2 - lon1)
-        val x = cos(lat1) * tan(lat2) - sin(lat1) * cos(lon2 - lon1)
-        var qibla = atan2(y, x) * 180 / PI
-        
-        if (qibla < 0) {
-            qibla += 360
-        }
-        
-        return qibla
-    }
+
     
     fun setCalculationMethod(method: CalculationMethod) {
         calculationMethod = method
@@ -173,28 +151,28 @@ class PrayerTimesManager(private val context: Context) {
         }
     }
     
-    fun setHighLatitudeAdjustment(adjustment: HighLatitudeAdjustment) {
-        highLatitudeAdjustment = adjustment
-        scope.launch {
-            updatePrayerTimes()
+    private fun CalculationMethod.toAdhanCalculatorMethod(): AdhanPrayerTimeCalculator.CalculationMethod {
+        return when (this) {
+            CalculationMethod.MUSLIM_WORLD_LEAGUE -> AdhanPrayerTimeCalculator.CalculationMethod.MWL
+            CalculationMethod.ISNA -> AdhanPrayerTimeCalculator.CalculationMethod.ISNA
+            CalculationMethod.EGYPTIAN -> AdhanPrayerTimeCalculator.CalculationMethod.EGYPT
+            CalculationMethod.KARACHI -> AdhanPrayerTimeCalculator.CalculationMethod.KARACHI
+            CalculationMethod.TEHRAN -> AdhanPrayerTimeCalculator.CalculationMethod.KARACHI // Fallback to Karachi
+            CalculationMethod.SHIA -> AdhanPrayerTimeCalculator.CalculationMethod.KARACHI // Fallback to Karachi
+            CalculationMethod.GULF -> AdhanPrayerTimeCalculator.CalculationMethod.DUBAI
+            CalculationMethod.KUWAIT -> AdhanPrayerTimeCalculator.CalculationMethod.KUWAIT
+            CalculationMethod.QATAR -> AdhanPrayerTimeCalculator.CalculationMethod.QATAR
+            CalculationMethod.SINGAPORE -> AdhanPrayerTimeCalculator.CalculationMethod.SINGAPORE
+            CalculationMethod.NORTH_AMERICA -> AdhanPrayerTimeCalculator.CalculationMethod.ISNA
+            CalculationMethod.DUBAI -> AdhanPrayerTimeCalculator.CalculationMethod.DUBAI
+            CalculationMethod.MOONSIGHTING -> AdhanPrayerTimeCalculator.CalculationMethod.MOONSIGHTING
         }
     }
-    
-    private fun CalculationMethod.toCalculatorMethod(): PrayerTimeCalculator.CalculationMethod {
+
+    private fun AsrMethod.toAdhanAsrMethod(): AdhanPrayerTimeCalculator.AsrMethod {
         return when (this) {
-            CalculationMethod.MUSLIM_WORLD_LEAGUE -> PrayerTimeCalculator.CalculationMethod.MUSLIM_WORLD_LEAGUE
-            CalculationMethod.ISNA -> PrayerTimeCalculator.CalculationMethod.ISNA
-            CalculationMethod.EGYPTIAN -> PrayerTimeCalculator.CalculationMethod.EGYPTIAN
-            CalculationMethod.KARACHI -> PrayerTimeCalculator.CalculationMethod.KARACHI
-            CalculationMethod.TEHRAN -> PrayerTimeCalculator.CalculationMethod.TEHRAN
-            CalculationMethod.SHIA -> PrayerTimeCalculator.CalculationMethod.SHIA
-            CalculationMethod.GULF -> PrayerTimeCalculator.CalculationMethod.GULF
-            CalculationMethod.KUWAIT -> PrayerTimeCalculator.CalculationMethod.KUWAIT
-            CalculationMethod.QATAR -> PrayerTimeCalculator.CalculationMethod.QATAR
-            CalculationMethod.SINGAPORE -> PrayerTimeCalculator.CalculationMethod.SINGAPORE
-            CalculationMethod.NORTH_AMERICA -> PrayerTimeCalculator.CalculationMethod.NORTH_AMERICA
-            CalculationMethod.DUBAI -> PrayerTimeCalculator.CalculationMethod.DUBAI
-            CalculationMethod.MOONSIGHTING -> PrayerTimeCalculator.CalculationMethod.MOONSIGHTING
+            AsrMethod.STANDARD -> AdhanPrayerTimeCalculator.AsrMethod.STANDARD
+            AsrMethod.HANAFI -> AdhanPrayerTimeCalculator.AsrMethod.HANAFI
         }
     }
 }

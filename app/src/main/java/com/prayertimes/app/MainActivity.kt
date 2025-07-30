@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
         }
         
         setContent {
-            PrayerTimesTheme {
+            PrayerTimesTheme(darkTheme = settingsManager.darkModeEnabled) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -201,25 +201,18 @@ fun MainScreen(
                     onClick = { selectedTab = 0 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Explore, contentDescription = "Qibla") },
-                    label = { Text("Qibla") },
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
-                )
-                NavigationBarItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                     label = { Text("Settings") },
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 }
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
                 )
             }
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             when (selectedTab) {
-                0 -> PrayerTimesScreen(prayerTimesManager = prayerTimesManager)
-                1 -> QiblaScreen(prayerTimesManager = prayerTimesManager)
-                2 -> SettingsScreen(
+                0 -> PrayerTimesScreen(prayerTimesManager = prayerTimesManager, settingsManager = settingsManager)
+                1 -> SettingsScreen(
                     prayerTimesManager = prayerTimesManager,
                     settingsManager = settingsManager
                 )

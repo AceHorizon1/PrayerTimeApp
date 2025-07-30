@@ -12,7 +12,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +30,14 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import com.prayertimes.app.data.City
+import com.prayertimes.app.data.cities
+import com.prayertimes.app.api.PrayerTimesRepository
+import com.prayertimes.app.api.PrayerTimesResponse
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
 
 data class PrayerTime(
     val name: String,
@@ -34,96 +46,53 @@ data class PrayerTime(
 
 @Composable
 fun PrayerTimesScreen(
-    prayerTimesManager: PrayerTimesManager? = null
+    prayerTimesManager: PrayerTimesManager? = null,
+    settingsManager: SettingsManager? = null
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var prayerTimes by remember { mutableStateOf<List<PrayerTime>>(emptyList()) }
     var nextPrayer by remember { mutableStateOf<PrayerTime?>(null) }
     var currentPrayer by remember { mutableStateOf<PrayerTime?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
-    
-    // Initial load
-    LaunchedEffect(Unit) {
-        println("PrayerTimesScreen: Initial load")
-        try {
-            prayerTimesManager?.let { manager ->
-                println("PrayerTimesScreen: Manager available, fetching times")
-                val times = manager.updatePrayerTimes()
-                println("PrayerTimesScreen: Received times: ${times.size}")
-                
-                if (times.isEmpty()) {
-                    println("PrayerTimesScreen: No prayer times received")
-                    errorMessage = "Unable to fetch prayer times. Please check your location settings."
-                } else {
+    var locationStatus by remember { mutableStateOf<String>("Getting location...") }
+
+    // Fetch prayer times using phone location
+    LaunchedEffect(prayerTimesManager) {
+        isLoading = true
+        errorMessage = null
+        locationStatus = "Getting location..."
+        
+        if (prayerTimesManager != null) {
+            try {
+                val times = prayerTimesManager.updatePrayerTimes()
+                if (times.isNotEmpty()) {
+                    prayerTimes = times
                     val now = Calendar.getInstance().time
-                    
                     val sortedTimes = times.sortedBy { it.time }
                     val next = sortedTimes.find { it.time > now }
                     val current = if (next != null) {
                         val index = sortedTimes.indexOf(next)
                         if (index > 0) sortedTimes[index - 1] else null
                     } else null
-                    
-                    prayerTimes = times
                     nextPrayer = next
                     currentPrayer = current
                     errorMessage = null
-                    println("PrayerTimesScreen: Updated state with times")
-                }
-            } ?: run {
-                println("PrayerTimesScreen: Manager is null")
-                errorMessage = "Prayer times service is not available. Please restart the app."
-            }
-        } catch (e: Exception) {
-            println("PrayerTimesScreen: Error loading times: ${e.message}")
-            e.printStackTrace()
-            errorMessage = "Error: ${e.message}"
-        } finally {
-            isLoading = false
-        }
-    }
-    
-    // Update prayer times every minute
-    LaunchedEffect(prayerTimesManager) {
-        println("PrayerTimesScreen: Starting periodic updates")
-        while (true) {
-            try {
-                prayerTimesManager?.let { manager ->
-                    println("PrayerTimesScreen: Updating times")
-                    val times = manager.updatePrayerTimes()
-                    println("PrayerTimesScreen: Received times: ${times.size}")
-                    
-                    if (times.isEmpty()) {
-                        println("PrayerTimesScreen: No prayer times received during update")
-                        errorMessage = "Unable to fetch prayer times. Please check your location settings."
-                    } else {
-                        val now = Calendar.getInstance().time
-                        
-                        val sortedTimes = times.sortedBy { it.time }
-                        val next = sortedTimes.find { it.time > now }
-                        val current = if (next != null) {
-                            val index = sortedTimes.indexOf(next)
-                            if (index > 0) sortedTimes[index - 1] else null
-                        } else null
-                        
-                        prayerTimes = times
-                        nextPrayer = next
-                        currentPrayer = current
-                        errorMessage = null
-                        println("PrayerTimesScreen: Updated state with times")
-                    }
-                } ?: run {
-                    println("PrayerTimesScreen: Manager is null during update")
-                    errorMessage = "Prayer times service is not available. Please restart the app."
+                    locationStatus = "Location-based prayer times"
+                } else {
+                    errorMessage = "Unable to calculate prayer times. Please check location permissions."
+                    locationStatus = "Location unavailable"
                 }
             } catch (e: Exception) {
-                println("PrayerTimesScreen: Error updating times: ${e.message}")
-                e.printStackTrace()
-                errorMessage = "Error: ${e.message}"
+                errorMessage = "Error calculating prayer times: ${e.message}"
+                locationStatus = "Error getting location"
             }
-            kotlinx.coroutines.delay(60000) // 1 minute
+        } else {
+            errorMessage = "Prayer times manager not available."
+            locationStatus = "Manager unavailable"
         }
+        isLoading = false
     }
     
     // Show loading state if loading
@@ -216,6 +185,11 @@ fun PrayerTimesScreen(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
     ) {
+        // Location Status
+        item {
+            LocationStatusCard(status = locationStatus)
+        }
+        
         // Next Prayer Card
         nextPrayer?.let { prayer ->
             item {
@@ -387,135 +361,40 @@ private fun isPrayerTimeActive(prayerTime: PrayerTime): Boolean {
 }
 
 @Composable
-fun QiblaScreen(
-    prayerTimesManager: PrayerTimesManager? = null
-) {
-    var heading by remember { mutableStateOf(0f) }
-    var qiblaDirection by remember { mutableStateOf(0f) }
-    var accuracy by remember { mutableStateOf(0f) }
-    
-    // Request location permissions and start compass updates
-    LaunchedEffect(prayerTimesManager) {
-        // TODO: Implement actual compass sensor updates
-        // For now, using placeholder values for heading
-        heading = 0f
-        
-        // Get Qibla direction from manager
-        prayerTimesManager?.calculateQiblaDirection()?.let { direction ->
-            qiblaDirection = direction.toFloat()
-        }
-        
-        // Placeholder accuracy
-        accuracy = 5f
-    }
-    
-    Column(
+fun LocationStatusCard(status: String) {
+    Card(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
     ) {
-        // Compass View
-        Box(
-            modifier = Modifier
-                .size(250.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // Compass Circle
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = CircleShape
-                    )
-                    .border(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = CircleShape
-                    )
-            )
-            
-            // Cardinal Points
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                listOf("N", "E", "S", "W").forEachIndexed { index, point ->
-                    Text(
-                        text = point,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier
-                            .offset(y = (-120).dp)
-                            .rotate(index * 90f)
-                    )
-                }
-            }
-            
-            // Qibla Arrow
-            Icon(
-                imageVector = Icons.Default.ArrowUpward,
-                contentDescription = "Qibla Direction",
-                modifier = Modifier
-                    .size(40.dp)
-                    .rotate(qiblaDirection - heading),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Accuracy Indicator
         Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Start
         ) {
             Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = "Accuracy",
-                tint = MaterialTheme.colorScheme.primary
+                imageVector = Icons.Default.MyLocation,
+                contentDescription = "Location Status",
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Accuracy: ${accuracy.toInt()}°",
+                text = status,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Instructions
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Hold your device flat",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Point the top of your device towards the arrow",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Text(
-                    text = "The arrow will point towards the Kaaba",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
         }
     }
 }
+
+
 
 enum class CalculationMethod(val displayName: String) {
     MUSLIM_WORLD_LEAGUE("Muslim World League"),
@@ -549,14 +428,136 @@ enum class HighLatitudeAdjustment(val displayName: String) {
 @Composable
 fun SettingsScreen(
     prayerTimesManager: PrayerTimesManager? = null,
-    settingsManager: SettingsManager? = null
+    settingsManager: SettingsManager? = null,
+    navController: NavController? = null // for navigation to advanced settings
+) {
+    var notificationsEnabled by remember { mutableStateOf(settingsManager?.notificationsEnabled ?: true) }
+    var darkModeEnabled by remember { mutableStateOf(settingsManager?.darkModeEnabled ?: false) }
+
+    // Update settings when changed
+    LaunchedEffect(notificationsEnabled) {
+        settingsManager?.notificationsEnabled = notificationsEnabled
+    }
+    LaunchedEffect(darkModeEnabled) {
+        settingsManager?.darkModeEnabled = darkModeEnabled
+    }
+
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        item {
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        }
+        // Notifications Section
+        item {
+            SettingsSection(title = "Notifications") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Enable Prayer Time Notifications",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Switch(
+                        checked = notificationsEnabled,
+                        onCheckedChange = { notificationsEnabled = it }
+                    )
+                }
+                // Only show "Remind 5 minutes before" if notifications are enabled
+                if (notificationsEnabled) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Remind 5 minutes before",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        // This is a static 5 min reminder for now
+                        Icon(Icons.Default.AccessTime, contentDescription = null)
+                    }
+                }
+            }
+        }
+        // Location Section
+        item {
+            SettingsSection(title = "Location") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "Using device location", style = MaterialTheme.typography.bodyLarge)
+                    Icon(Icons.Default.MyLocation, contentDescription = "Device Location", tint = MaterialTheme.colorScheme.primary)
+                }
+                Text(
+                    text = "Prayer times are calculated based on your current location",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+        // Dark Mode Section
+        item {
+            SettingsSection(title = "Appearance") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "Dark Mode", style = MaterialTheme.typography.bodyLarge)
+                    Switch(
+                        checked = darkModeEnabled,
+                        onCheckedChange = { darkModeEnabled = it }
+                    )
+                }
+            }
+        }
+        // Advanced Settings Button
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(
+                    onClick = { navController?.navigate("advanced_settings") },
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text("Advanced Settings")
+                }
+            }
+        }
+    }
+
+
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdvancedSettingsScreen(
+    prayerTimesManager: PrayerTimesManager? = null,
+    settingsManager: SettingsManager? = null,
+    navController: NavController? = null
 ) {
     var calculationMethod by remember { mutableStateOf(settingsManager?.calculationMethod ?: CalculationMethod.MUSLIM_WORLD_LEAGUE) }
     var asrMethod by remember { mutableStateOf(settingsManager?.asrMethod ?: AsrMethod.STANDARD) }
     var highLatitudeAdjustment by remember { mutableStateOf(settingsManager?.highLatitudeAdjustment ?: HighLatitudeAdjustment.NONE) }
-    var notificationsEnabled by remember { mutableStateOf(settingsManager?.notificationsEnabled ?: true) }
     var notificationOffset by remember { mutableStateOf(settingsManager?.notificationOffset ?: 5) }
-    
+
     // Dropdown expanded states
     var calcDropdownExpanded by remember { mutableStateOf(false) }
     var asrDropdownExpanded by remember { mutableStateOf(false) }
@@ -575,28 +576,30 @@ fun SettingsScreen(
     
     LaunchedEffect(highLatitudeAdjustment) {
         settingsManager?.highLatitudeAdjustment = highLatitudeAdjustment
-        prayerTimesManager?.setHighLatitudeAdjustment(highLatitudeAdjustment)
-    }
-    
-    LaunchedEffect(notificationsEnabled) {
-        settingsManager?.notificationsEnabled = notificationsEnabled
     }
     
     LaunchedEffect(notificationOffset) {
         settingsManager?.notificationOffset = notificationOffset
     }
     
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp)
-    ) {
-        item {
-            Text(
-                text = "Settings",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Top App Bar with Back Button
+        TopAppBar(
+            title = { Text("Advanced Settings") },
+            navigationIcon = {
+                IconButton(onClick = { navController?.navigateUp() }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface
             )
-        }
+        )
+        
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp)
+        ) {
         
         // Calculation Method Section
         item {
@@ -697,9 +700,9 @@ fun SettingsScreen(
             }
         }
         
-        // Notifications Section
+        // Notification Offset Section
         item {
-            SettingsSection(title = "Notifications") {
+            SettingsSection(title = "Notification Offset") {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -708,42 +711,24 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Enable Prayer Time Notifications",
+                        text = "Notify $notificationOffset minutes before",
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Switch(
-                        checked = notificationsEnabled,
-                        onCheckedChange = { notificationsEnabled = it }
-                    )
-                }
-                
-                if (notificationsEnabled) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row {
+                        IconButton(onClick = { if (notificationOffset > 0) notificationOffset -= 5 }) {
+                            Icon(Icons.Default.Delete, "Decrease")
+                        }
                         Text(
-                            text = "Notify $notificationOffset minutes before",
+                            text = "$notificationOffset",
                             style = MaterialTheme.typography.bodyLarge
                         )
-                        Row {
-                            IconButton(onClick = { if (notificationOffset > 0) notificationOffset -= 5 }) {
-                                Icon(Icons.Default.Delete, "Decrease")
-                            }
-                            Text(
-                                text = "$notificationOffset",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            IconButton(onClick = { if (notificationOffset < 30) notificationOffset += 5 }) {
-                                Icon(Icons.Default.Add, "Increase")
-                            }
+                        IconButton(onClick = { if (notificationOffset < 30) notificationOffset += 5 }) {
+                            Icon(Icons.Default.Add, "Increase")
                         }
                     }
                 }
             }
+        }
         }
     }
 }
