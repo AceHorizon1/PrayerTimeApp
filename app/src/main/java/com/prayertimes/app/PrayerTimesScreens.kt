@@ -15,12 +15,9 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Alignment as ComposeAlignment
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.material3.*
@@ -587,92 +584,6 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.padding(top = 4.dp)
                 )
-                
-                // City Selection
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Or select a city for testing:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                
-                var selectedCity by remember { mutableStateOf(settingsManager?.selectedCity ?: "") }
-                var showCityDialog by remember { mutableStateOf(false) }
-                
-                Button(
-                    onClick = { showCityDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text(
-                        text = if (selectedCity.isNotEmpty()) selectedCity else "Select City",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                
-                if (selectedCity.isNotEmpty()) {
-                    Text(
-                        text = "Using selected city for prayer times",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-                
-                // City Selection Dialog
-                if (showCityDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showCityDialog = false },
-                        title = { Text("Select City") },
-                        text = {
-                            LazyColumn {
-                                items(cities) { city ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                selectedCity = "${city.name}, ${city.country}"
-                                                settingsManager?.selectedCity = selectedCity
-                                                settingsManager?.selectedCityLat = city.lat
-                                                settingsManager?.selectedCityLng = city.lng
-                                                showCityDialog = false
-                                            }
-                                            .padding(vertical = 12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = city.name,
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-                                            Text(
-                                                text = city.country,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.secondary
-                                            )
-                                        }
-                                        if (selectedCity == "${city.name}, ${city.country}") {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = "Selected",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
-                                    if (city != cities.last()) {
-                                        Divider()
-                                    }
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(onClick = { showCityDialog = false }) {
-                                Text("Cancel")
-                            }
-                        }
-                    )
-                }
             }
         }
         // Dark Mode Section
