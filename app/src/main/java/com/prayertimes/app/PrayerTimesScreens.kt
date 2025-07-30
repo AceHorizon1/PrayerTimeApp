@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -498,17 +499,23 @@ enum class TimeZonePreference(val displayName: String, val offset: Int) {
 fun SettingsScreen(
     prayerTimesManager: PrayerTimesManager? = null,
     settingsManager: SettingsManager? = null,
-    navController: NavController? = null // for navigation to advanced settings
+    navController: NavController? = null, // for navigation to advanced settings
+    onDarkModeChanged: ((Boolean) -> Unit)? = null
 ) {
     var notificationsEnabled by remember { mutableStateOf(settingsManager?.notificationsEnabled ?: true) }
-    var darkModeEnabled by remember { mutableStateOf(settingsManager?.darkModeEnabled ?: false) }
+    
+    // Use the current dark mode setting from SettingsManager
+    val darkModeEnabled = settingsManager?.darkModeEnabled ?: false
 
     // Update settings when changed
     LaunchedEffect(notificationsEnabled) {
         settingsManager?.notificationsEnabled = notificationsEnabled
     }
-    LaunchedEffect(darkModeEnabled) {
-        settingsManager?.darkModeEnabled = darkModeEnabled
+    
+    // Function to update dark mode setting
+    fun updateDarkMode(enabled: Boolean) {
+        settingsManager?.darkModeEnabled = enabled
+        onDarkModeChanged?.invoke(enabled)
     }
 
 
@@ -590,7 +597,7 @@ fun SettingsScreen(
                     Text(text = "Dark Mode", style = MaterialTheme.typography.bodyLarge)
                     Switch(
                         checked = darkModeEnabled,
-                        onCheckedChange = { darkModeEnabled = it }
+                        onCheckedChange = { updateDarkMode(it) }
                     )
                 }
             }

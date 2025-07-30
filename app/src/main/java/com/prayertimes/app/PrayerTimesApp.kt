@@ -7,9 +7,10 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -37,11 +38,17 @@ fun PrayerTimesApp() {
     val settingsManager = remember { SettingsManager(context) }
     val prayerTimesManager = remember { PrayerTimesManager(context) }
     
-    // Make theme reactive to settings changes
-    val darkTheme by remember { derivedStateOf { settingsManager.darkModeEnabled } }
+    // Create mutable state for dark mode that can be updated
+    var darkModeEnabled by remember { mutableStateOf(settingsManager.darkModeEnabled) }
+    
+    // Function to update dark mode and trigger recomposition
+    fun updateDarkMode(enabled: Boolean) {
+        settingsManager.darkModeEnabled = enabled
+        darkModeEnabled = enabled
+    }
     
     // Apply theme based on settings
-    PrayerTimesTheme(darkTheme = darkTheme) {
+    PrayerTimesTheme(darkTheme = darkModeEnabled) {
         Scaffold(
             bottomBar = {
                 BottomNavigationBar(navController)
@@ -62,7 +69,8 @@ fun PrayerTimesApp() {
                         SettingsScreen(
                             prayerTimesManager = prayerTimesManager,
                             settingsManager = settingsManager,
-                            navController = navController
+                            navController = navController,
+                            onDarkModeChanged = { updateDarkMode(it) }
                         ) 
                     }
                     composable(Screen.AdvancedSettings.route) { 
